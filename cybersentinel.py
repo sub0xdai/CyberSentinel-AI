@@ -1,15 +1,23 @@
-#/usr/bin/env python3
+#!/usr/bin/env python3
+# cybersentinel.py - AI-powered Security Analysis
+# Part of CyberSentinel-AI
+
 import requests
 import json
 import os
 from datetime import datetime
 from dotenv import load_dotenv
 
+# Banner display
+print("┌───────────────────────────────────────────────┐")
+print("│                                               │")
+print("│ CyberSentinel-AI: AI Analysis                │")
+print("│ GPT-4o Powered Security Intelligence         │")
+print("│                                               │")
+print("└───────────────────────────────────────────────┘")
+
 # Configuration
 # Load API key from environment variable or config file
-
-
-# Try to load from .env file
 load_dotenv()
 
 # Get API key from environment variable
@@ -34,20 +42,39 @@ AI_LOG_DIR = f"{LOG_DIR}/ai"
 os.makedirs(LOG_DIR, exist_ok=True)
 os.makedirs(AI_LOG_DIR, exist_ok=True)
 
+def timestamp():
+    """Generate current timestamp"""
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 def get_alerts():
     """Get alerts from the alerts.json file"""
     alerts_file = f"{LOG_DIR}/alerts.json"
     if not os.path.exists(alerts_file):
-        print("No alerts file found. Run auth_monitor.py first.")
+        print(f"[{timestamp()}] No alerts file found. Run monitor_auth.sh first.")
         return []
     
     with open(alerts_file, 'r') as f:
-        return json.load(f)
+        content = f.read().strip()
+        # Handle empty content
+        if not content:
+            return []
+        try:
+            # Check if content is an array or single object
+            if content.startswith('['):
+                return json.loads(content)
+            else:
+                return [json.loads(content)]
+        except json.JSONDecodeError as e:
+            print(f"[{timestamp()}] Error parsing alerts JSON: {e}")
+            print(f"[{timestamp()}] Content: {content}")
+            return []
 
 def analyze_with_openai(alerts):
     """Send alerts to AI for analysis"""
     if not alerts:
         return {"message": "No alerts detected."}
+    
+    print(f"[{timestamp()}] Analyzing {len(alerts)} alerts with GPT-4o")
     
     alert_json = json.dumps(alerts, indent=2)
     
@@ -74,128 +101,153 @@ def analyze_with_openai(alerts):
     }
     
     data = {
-        "model": "gpt-4o",  # Use GPT-4o for best results
+        "model": "gpt-4o",  # Using GPT-4o for enhanced capabilities
         "messages": [
             {"role": "system", "content": "You are a cybersecurity AI analyst specializing in attack detection and compliance. Provide output in JSON format only."},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.2  # Lower temperature for more focused responses
+        "temperature": 0.2,  # Lower temperature for more focused responses
+        "response_format": {"type": "json_object"}  # Ensures output is valid JSON
     }
     
     try:
+        print(f"[{timestamp()}] Sending request to OpenAI API...")
         response = requests.post(OPENAI_API_URL, headers=headers, json=data)
+        
+        # Check for HTTP errors
+        response.raise_for_status()
+        
         response_data = response.json()
         
         # Log the raw response for debugging
         with open(f"{AI_LOG_DIR}/openai_response_raw.json", "w") as f:
             json.dump(response_data, f, indent=2)
         
+        print(f"[{timestamp()}] Received response from OpenAI API")
+        
         response_text = response_data["choices"][0]["message"]["content"]
         
-        # Try to extract JSON from response
+        # Parse JSON response
         try:
-            # Look for JSON block in response
-            json_start = response_text.find('{')
-            json_end = response_text.rfind('}') + 1
+            analysis = json.loads(response_text)
             
-            if json_start >= 0 and json_end > json_start:
-                json_str = response_text[json_start:json_end]
-                analysis = json.loads(json_str)
-            else:
-                # Fallback if no JSON found
-                analysis = {"error": "No JSON found in response", "raw_response": response_text}
-        except json.JSONDecodeError:
-            analysis = {"error": "Could not parse JSON", "raw_response": response_text}
-        
-        # Log the parsed analysis
-        with open(f"{AI_LOG_DIR}/openai_analysis.json", "w") as f:
-            json.dump(analysis, f, indent=2)
-        
+            # Log the parsed analysis
+            with open(f"{AI_LOG_DIR}/openai_analysis.json", "w") as f:
+                json.dump(analysis, f, indent=2)
+            
+            print(f"[{timestamp()}] Analysis saved to {AI_LOG_DIR}/openai_analysis.json")
+            
+        except json.JSONDecodeError as e:
+            error_msg = f"Could not parse JSON response: {e}"
+            print(f"[{timestamp()}] ERROR: {error_msg}")
+            analysis = {"error": error_msg, "raw_response": response_text}
+            
         return analysis
         
+    except requests.exceptions.RequestException as e:
+        error_msg = f"Error connecting to OpenAI API: {str(e)}"
+        print(f"[{timestamp()}] ERROR: {error_msg}")
+        with open(f"{AI_LOG_DIR}/error.log", "a") as f:
+            f.write(f"[{timestamp()}] {error_msg}\n")
+        return {"error": error_msg}
     except Exception as e:
         error_msg = f"Error analyzing alerts: {str(e)}"
+        print(f"[{timestamp()}] ERROR: {error_msg}")
         with open(f"{AI_LOG_DIR}/error.log", "a") as f:
-            f.write(f"[{datetime.now()}] {error_msg}\n")
+            f.write(f"[{timestamp()}] {error_msg}\n")
         return {"error": error_msg}
 
-def execute_response(analysis):
-    """Execute simulated response based on OpenAI's analysis"""
-    try:
-        is_attack = analysis.get("is_credential_attack", False)
-        severity = analysis.get("severity", 0)
-        source_ip = analysis.get("source", "")
-        mitre_technique = analysis.get("mitre_technique", "")
-        app_impact = analysis.get("app_impact", "")
+def summarize_analysis(analysis):
+    """Display a summary of the analysis results"""
+    # Check if analysis contains error
+    if "error" in analysis:
+        print(f"[{timestamp()}] Error in analysis: {analysis['error']}")
+        return
+    
+    # Extract key information
+    is_attack = analysis.get("is_credential_attack", False)
+    severity = analysis.get("severity", 0)
+    source_ip = analysis.get("source", "")
+    targets = analysis.get("targets", [])
+    mitre_technique = analysis.get("mitre_technique", "")
+    app_impact = analysis.get("app_impact", "")
+    recommendations = analysis.get("recommended_actions", [])
+    
+    # Display formatted summary
+    print("\n----- ANALYSIS SUMMARY -----")
+    print(f"Credential Attack: {'Yes' if is_attack else 'No'}")
+    print(f"Severity: {severity}/10")
+    
+    if is_attack:
+        print(f"Source IP: {source_ip}")
         
-        # Log the analysis
-        with open(f"{AI_LOG_DIR}/responses.log", "a") as f:
-            f.write(f"[{datetime.now()}] Analysis: {json.dumps(analysis)}\n")
-        
-        # Skip response if not an attack or low severity
-        if not is_attack:
-            return "INFO: Not identified as a credential attack"
-        
-        # Simulate response based on severity
-        if severity >= 8 and source_ip:
-            # High severity - block IP (simulation)
-            response_msg = f"CRITICAL: IP {source_ip} would be blocked due to high-severity attack (severity={severity})"
-            
-            # Simulate iptables command for documentation
-            iptables_cmd = f"iptables -A INPUT -s {source_ip} -j DROP"
-            
-            # Log command that would be executed in a real system
-            with open(f"{AI_LOG_DIR}/commands.log", "a") as f:
-                f.write(f"[{datetime.now()}] Command: {iptables_cmd}\n")
-            
-            # Log additional information for HD-grade documentation
-            with open(f"{AI_LOG_DIR}/compliance.log", "a") as f:
-                f.write(f"[{datetime.now()}] MITRE ATT&CK: {mitre_technique}\n")
-                f.write(f"[{datetime.now()}] APP Impact: {app_impact}\n")
-                
-        elif severity >= 5 and source_ip:
-            # Medium severity - alert only
-            response_msg = f"WARNING: Potential credential attack from {source_ip} detected (severity={severity})"
+        # Display targets
+        if isinstance(targets, list):
+            print(f"Targeted accounts: {', '.join(targets)}")
         else:
-            # Low severity - log only
-            response_msg = f"INFO: Low-severity suspicious activity logged (severity={severity})"
+            print(f"Targeted accounts: {targets}")
         
-        # Log the response action
-        with open(f"{AI_LOG_DIR}/responses.log", "a") as f:
-            f.write(f"[{datetime.now()}] Response: {response_msg}\n")
+        # Display MITRE technique
+        print(f"MITRE ATT&CK: {mitre_technique}")
         
-        return response_msg
+        # Display APP impact
+        print(f"Australian Privacy Principles impact: {app_impact}")
         
-    except Exception as e:
-        error_msg = f"Error executing response: {str(e)}"
-        with open(f"{AI_LOG_DIR}/error.log", "a") as f:
-            f.write(f"[{datetime.now()}] {error_msg}\n")
-        return error_msg
+        # Display recommendations
+        print("\nRecommended actions:")
+        if isinstance(recommendations, list):
+            for i, rec in enumerate(recommendations, 1):
+                print(f"  {i}. {rec}")
+        else:
+            print(f"  * {recommendations}")
+    
+    print("--------------------------\n")
+
+def log_run_info(analysis):
+    """Log run information to a file"""
+    # Create a log entry
+    log_entry = {
+        "timestamp": timestamp(),
+        "analysis_summary": {
+            "is_credential_attack": analysis.get("is_credential_attack", False),
+            "severity": analysis.get("severity", 0),
+            "source": analysis.get("source", ""),
+        }
+    }
+    
+    # Write to run log
+    with open(f"{AI_LOG_DIR}/run.log", "a") as f:
+        f.write(f"[{timestamp()}] Analysis completed: ")
+        if "error" in analysis:
+            f.write(f"ERROR: {analysis['error']}\n")
+        else:
+            attack_status = "Attack detected" if analysis.get("is_credential_attack", False) else "No attack detected"
+            severity = analysis.get("severity", 0)
+            f.write(f"{attack_status} (Severity: {severity}/10)\n")
 
 def main():
-    print(f"[{datetime.now()}] CyberSentinel-AI starting...")
+    print(f"[{timestamp()}] CyberSentinel-AI starting...")
     
     # Get alerts
     alerts = get_alerts()
     
     if not alerts:
-        print("No alerts found.")
+        print(f"[{timestamp()}] No alerts found.")
         return
     
-    print(f"Found {len(alerts)} alerts.")
+    print(f"[{timestamp()}] Found {len(alerts)} alerts.")
     
     # Analyze with OpenAI
     analysis = analyze_with_openai(alerts)
     
-    # Execute response
-    response = execute_response(analysis)
+    # Display summary
+    summarize_analysis(analysis)
     
-    # Print output
-    print(response)
+    # Log run information
+    log_run_info(analysis)
     
-    # Log the run
-    with open(f"{AI_LOG_DIR}/run.log", "a") as f:
-        f.write(f"[{datetime.now()}] {response}\n")
+    print(f"[{timestamp()}] Analysis completed.")
+    print(f"[{timestamp()}] Run 'respond.sh' to execute automated response actions.")
 
 if __name__ == "__main__":
     main()
