@@ -1,63 +1,49 @@
 # CyberSentinel-AI
 
+**AI-Powered Security Platform**
 
+## Overview
+Integrates Kali Linux tools with AI to detect and respond to credential attacks.
 
-**Next-Generation AI-Enhanced Enterprise Security Platform**
-
-## Project Overview
-
-An intelligent cybersecurity defense system that combines traditional SIEM capabilities with advanced AI analysis for real-time threat detection, automated response, and regulatory compliance monitoring.
-
-## Planned Architecture
-
-**Multi-VM Simulation Environment**
-- Isolated attack/defense laboratory
-- Enterprise network simulation with realistic services
-- AI-powered security operations center
-- Automated threat response orchestration
+## Architecture
+- Hybrid bash/Python using Kali tools  
+- GPT-4o for security analysis  
+- Focused on credential attacks  
 
 ## Core Components
 
-### 🤖 **AI Security Engine**
-- Multi-model threat analysis using leading LLMs
-- Machine learning anomaly detection algorithms
-- Intelligent security rule generation
-- Context-aware incident prioritization
+### 🔍 Attack Detection
+- Bash log monitoring  
+- Brute force pattern recognition  
+- Real-time JSON alerts  
 
-### 🛡️ **Adaptive Defense System**
-- Real-time log analysis and correlation
-- Automated threat hunting capabilities
-- Dynamic security posture adjustment
-- Compliance monitoring and reporting
+### 🧠 AI Analysis
+- GPT-4o threat intelligence  
+- MITRE ATT&CK mapping  
+- Privacy impact assessment  
 
-### 🎯 **Attack Simulation Framework**
-- Realistic adversary emulation
-- Multi-stage attack scenarios
-- Lateral movement and persistence testing
-- Impact assessment and documentation
+### 🛡️ Automated Response
+- IP blocking (iptables)  
+- Severity-based actions  
+- Audit logging  
 
-## Key Objectives
+### 🎯 Attack Simulation
+- Hydra-based SSH attacks  
+- Configurable parameters  
 
-**Technical Goals**
-- Sub-minute threat detection and analysis
-- Automated security rule creation
-- Intelligent incident response workflows
-- Comprehensive attack surface monitoring
+## Features
+- Sub-minute detection  
+- Structured JSON alerts  
+- NIST compliance mapping  
+- Audit trails  
 
-**Compliance Integration**
-- Australian Privacy Principles alignment
-- NIST Cybersecurity Framework mapping
-- Automated regulatory reporting
-- Risk assessment documentation
+## Tech Stack
+- Hydra  
+- Bash/Python  
+- GPT-4o API  
 
-## Expected Outcomes
-
-A comprehensive demonstration of how AI can enhance traditional cybersecurity operations, providing:
-- Faster threat detection and response
-- Reduced false positive rates
-- Intelligent security recommendations
-- Automated compliance monitoring
-
----
-
-*An innovation project exploring the future of AI-driven cybersecurity operations*
+## Outcome
+Demonstrates AI-enhanced security with:  
+- Better detection  
+- Richer analysis  
+- Compliance-aware responses  
