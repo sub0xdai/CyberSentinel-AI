@@ -2,6 +2,9 @@
 # cybersentinel.sh - Main workflow script for CyberSentinel-AI
 # Part of CyberSentinel-AI
 
+# Handle broken pipe errors gracefully
+trap '' PIPE
+
 # Banner display
 echo "┌───────────────────────────────────────────────┐"
 echo "│                                               │"
@@ -109,8 +112,8 @@ read -p "Run log monitoring? (y/n): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
   # Get monitoring parameters
-  read -p "Log file [/var/log/auth.log]: " logfile
-  logfile=${logfile:-"/var/log/auth.log"}
+  read -p "Log file [logs/auth.log]: " logfile
+  logfile=${logfile:-"logs/auth.log"}
   
   read -p "Threshold [3]: " threshold
   threshold=${threshold:-3}
