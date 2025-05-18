@@ -57,7 +57,7 @@ EOF
     
     echo "[$(timestamp)] Sample alert created for testing"
     echo "[$(timestamp)] Alert saved to $ALERT_FILE"
-    return 0
+    exit 0
   fi
 fi
 
