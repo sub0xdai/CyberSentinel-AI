@@ -178,11 +178,20 @@ fi
 
 # Check if AI analysis was performed
 if [ -f "$LOG_DIR/ai/openai_analysis.json" ]; then
-  if grep -q "is_credential_attack.*true" "$LOG_DIR/ai/openai_analysis.json"; then
+  # Use multi-method detection - similar to respond.sh
+  if grep -q "is_credential_attack.*true" "$LOG_DIR/ai/openai_analysis.json" || 
+     grep -q "Credential Attack: Yes" "$LOG_DIR/ai/openai_analysis.json" ||
+     grep -q '"attack":.*true' "$LOG_DIR/ai/openai_analysis.json"; then
     SEVERITY=$(grep -o '"severity":\s*[0-9]*' "$LOG_DIR/ai/openai_analysis.json" | grep -o '[0-9]*')
     echo "│ AI Analysis: Attack confirmed (Severity: $SEVERITY/10)"
   else
-    echo "│ AI Analysis: No attack confirmed"
+    # Check response log as a last resort
+    if [ -f "$LOG_DIR/ai/responses.log" ] && grep -q "Credential attack detected" "$LOG_DIR/ai/responses.log"; then
+      SEVERITY=$(grep -o "severity=[0-9]*" "$LOG_DIR/ai/responses.log" | grep -o '[0-9]*' | head -1)
+      echo "│ AI Analysis: Attack confirmed (Severity: $SEVERITY/10)"
+    else
+      echo "│ AI Analysis: No attack confirmed"
+    fi
   fi
 else
   echo "│ AI Analysis: Not executed"
