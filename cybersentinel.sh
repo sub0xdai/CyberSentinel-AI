@@ -77,8 +77,12 @@ fi
 # Make scripts executable if they aren't already
 chmod +x "$SCRIPT_DIR/run_attack.sh"
 chmod +x "$SCRIPT_DIR/monitor_auth.sh"
+chmod +x "$SCRIPT_DIR/monitor_web_auth.sh"
 chmod +x "$SCRIPT_DIR/respond.sh"
 chmod +x "$SCRIPT_DIR/cybersentinel.py"
+chmod +x "$SCRIPT_DIR/iso27001_mapper.py"
+chmod +x "$SCRIPT_DIR/metrics_analyzer.py"
+chmod +x "$SCRIPT_DIR/generate_dashboard.sh"
 
 # Start workflow
 echo "[$(timestamp)] Starting CyberSentinel-AI workflow"
@@ -108,24 +112,66 @@ else
   echo "[$(timestamp)] Skipping attack simulation"
 fi
 
-# Execute monitoring
+# Execute monitoring (multiple detection vectors)
 echo
-echo "[$(timestamp)] PHASE 2: Log Monitoring"
-read -p "Run log monitoring? (y/n): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-  # Get monitoring parameters
-  read -p "Log file [logs/auth.log]: " logfile
-  logfile=${logfile:-"logs/auth.log"}
-  
-  read -p "Threshold [3]: " threshold
-  threshold=${threshold:-3}
-  
-  # Run monitoring
-  "$SCRIPT_DIR/monitor_auth.sh" "$logfile" "$threshold"
-else
-  echo "[$(timestamp)] Skipping log monitoring"
-fi
+echo "[$(timestamp)] PHASE 2: Multi-Vector Monitoring"
+echo "  1. SSH Authentication Log Monitoring"
+echo "  2. Web Authentication Log Monitoring"
+echo "  3. Both monitoring types"
+echo "  4. Skip monitoring"
+read -p "Choose monitoring type [3]: " monitoring_option
+monitoring_option=${monitoring_option:-3}
+
+case $monitoring_option in
+  1)
+    # Run SSH monitoring only
+    read -p "SSH Log file [logs/auth.log]: " ssh_logfile
+    ssh_logfile=${ssh_logfile:-"logs/auth.log"}
+    
+    read -p "Threshold [3]: " ssh_threshold
+    ssh_threshold=${ssh_threshold:-3}
+    
+    echo "[$(timestamp)] Running SSH authentication monitoring"
+    "$SCRIPT_DIR/monitor_auth.sh" "$ssh_logfile" "$ssh_threshold"
+    ;;
+  2)
+    # Run web monitoring only
+    read -p "Web Log file [logs/apache_access.log]: " web_logfile
+    web_logfile=${web_logfile:-"logs/apache_access.log"}
+    
+    read -p "Threshold [5]: " web_threshold
+    web_threshold=${web_threshold:-5}
+    
+    echo "[$(timestamp)] Running web authentication monitoring"
+    "$SCRIPT_DIR/monitor_web_auth.sh" "$web_logfile" "$web_threshold"
+    ;;
+  3)
+    # Run both monitoring types
+    read -p "SSH Log file [logs/auth.log]: " ssh_logfile
+    ssh_logfile=${ssh_logfile:-"logs/auth.log"}
+    
+    read -p "SSH Threshold [3]: " ssh_threshold
+    ssh_threshold=${ssh_threshold:-3}
+    
+    read -p "Web Log file [logs/apache_access.log]: " web_logfile
+    web_logfile=${web_logfile:-"logs/apache_access.log"}
+    
+    read -p "Web Threshold [5]: " web_threshold
+    web_threshold=${web_threshold:-5}
+    
+    echo "[$(timestamp)] Running SSH authentication monitoring"
+    "$SCRIPT_DIR/monitor_auth.sh" "$ssh_logfile" "$ssh_threshold"
+    
+    echo "[$(timestamp)] Running web authentication monitoring"
+    "$SCRIPT_DIR/monitor_web_auth.sh" "$web_logfile" "$web_threshold"
+    ;;
+  4)
+    echo "[$(timestamp)] Skipping monitoring phase"
+    ;;
+  *)
+    echo "[$(timestamp)] Invalid option. Skipping monitoring phase"
+    ;;
+esac
 
 # Execute AI analysis
 echo
@@ -145,10 +191,47 @@ echo "[$(timestamp)] PHASE 4: Automated Response"
 read -p "Run automated response? (y/n): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-  # Run response
-  "$SCRIPT_DIR/respond.sh"
+  # Enable actual blocking?
+  read -p "Enable actual IP blocking? (CAUTION!) (y/n): " -n 1 -r real_blocking
+  echo
+  
+  # Run response with or without actual blocking
+  if [[ $real_blocking =~ ^[Yy]$ ]]; then
+    echo "[$(timestamp)] Running response with REAL IP blocking"
+    "$SCRIPT_DIR/respond.sh" "real_blocking"
+  else
+    echo "[$(timestamp)] Running response in simulation mode"
+    "$SCRIPT_DIR/respond.sh"
+  fi
 else
   echo "[$(timestamp)] Skipping automated response"
+fi
+
+# Execute compliance mapping and metrics generation
+echo
+echo "[$(timestamp)] PHASE 5: Compliance & Metrics"
+read -p "Run compliance mapping & metrics generation? (y/n): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+  # Run ISO 27001 compliance mapping
+  echo "[$(timestamp)] Running ISO 27001 compliance mapping"
+  python3 "$SCRIPT_DIR/iso27001_mapper.py"
+  
+  # Run metrics analyzer
+  echo "[$(timestamp)] Running security metrics analysis"
+  python3 "$SCRIPT_DIR/metrics_analyzer.py"
+  
+  # Generate dashboard
+  read -p "Generate visual dashboard? (y/n): " -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "[$(timestamp)] Generating security dashboard"
+    "$SCRIPT_DIR/generate_dashboard.sh"
+  else
+    echo "[$(timestamp)] Skipping dashboard generation"
+  fi
+else
+  echo "[$(timestamp)] Skipping compliance & metrics phase"
 fi
 
 # Display workflow summary

@@ -129,13 +129,34 @@ if [ "$severity" -ge "8" ]; then
     # Log command
     echo "[$(timestamp)] Command: $iptables_cmd" | tee -a "$COMMAND_LOG"
     
-    # Execute command (uncomment to actually block)
-    # sudo $iptables_cmd
+    # Check if real blocking is enabled
+    if [ "$1" = "real_blocking" ]; then
+      # Actually execute the blocking command
+      if command -v iptables >/dev/null 2>&1; then
+        echo "[$(timestamp)] CRITICAL: Actually blocking IP $source_ip with iptables" | tee -a "$RESPONSE_LOG"
+        if sudo iptables -A INPUT -s $source_ip -j DROP 2>/dev/null; then
+          echo "[$(timestamp)] SUCCESS: IP $source_ip has been blocked" | tee -a "$RESPONSE_LOG"
+        else
+          echo "[$(timestamp)] ERROR: Failed to block IP $source_ip. May need root privileges." | tee -a "$RESPONSE_LOG"
+        fi
+      elif command -v ufw >/dev/null 2>&1; then
+        # Try UFW as alternative
+        echo "[$(timestamp)] CRITICAL: Blocking IP $source_ip with UFW" | tee -a "$RESPONSE_LOG"
+        if sudo ufw deny from $source_ip to any 2>/dev/null; then
+          echo "[$(timestamp)] SUCCESS: IP $source_ip has been blocked with UFW" | tee -a "$RESPONSE_LOG"
+        else
+          echo "[$(timestamp)] ERROR: Failed to block IP $source_ip with UFW. May need root privileges." | tee -a "$RESPONSE_LOG"
+        fi
+      else
+        echo "[$(timestamp)] ERROR: No firewall tool found (iptables or ufw)" | tee -a "$RESPONSE_LOG"
+      fi
+    else
+      # Simulate blocking
+      echo "[$(timestamp)] IP blocking simulated. Run with 'real_blocking' parameter to actually block." | tee -a "$RESPONSE_LOG"
+    fi
     
-    # Add to block list
+    # Add to block list regardless
     echo "$source_ip" >> "$BLOCK_LIST"
-    
-    echo "[$(timestamp)] IP blocking simulated. To actually block, uncomment the sudo line in this script." | tee -a "$RESPONSE_LOG"
   fi
   
 elif [ "$severity" -ge "5" ]; then
