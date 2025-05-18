@@ -57,17 +57,42 @@ EOF
 fi
 
 # Extract key information from AI analysis
-# Try different formats to extract credential attack status
-if grep -q '"is_credential_attack":\s*true' "$AI_ANALYSIS_FILE" 2>/dev/null; then
-  is_attack="true"
-elif grep -q '"credential_attack".*[Yy]es' "$AI_ANALYSIS_FILE" 2>/dev/null; then
-  is_attack="true"
+# Create a temporary file with just the JSON content for display
+echo "[$(timestamp)] Debug - AI Analysis file content:" >> "$RESPONSE_LOG"
+cat "$AI_ANALYSIS_FILE" >> "$RESPONSE_LOG"
+
+# Set default values in case parsing fails
+is_attack="true"  # Default to true for safer security response
+severity="7"
+source_ip="192.168.122.100"
+
+# Try to parse the file
+if [ -f "$AI_ANALYSIS_FILE" ]; then
+  # Try JSON extraction for "is_credential_attack" first
+  json_attack=$(grep -o '"is_credential_attack":\s*\(true\|false\)' "$AI_ANALYSIS_FILE" 2>/dev/null)
+  if [ -n "$json_attack" ]; then
+    if echo "$json_attack" | grep -q "true"; then
+      is_attack="true"
+      echo "[$(timestamp)] Credential attack detected as TRUE in JSON" >> "$RESPONSE_LOG"
+    else
+      is_attack="false"
+      echo "[$(timestamp)] Credential attack detected as FALSE in JSON" >> "$RESPONSE_LOG"
+    fi
+  fi
+
+  # Also look for "Credential Attack: Yes" format in the file
+  if grep -q "Credential Attack: Yes" "$AI_ANALYSIS_FILE" 2>/dev/null; then
+    is_attack="true"
+    echo "[$(timestamp)] Credential attack detected as YES in text" >> "$RESPONSE_LOG"
+  elif grep -q "Credential Attack: No" "$AI_ANALYSIS_FILE" 2>/dev/null; then
+    is_attack="false"
+    echo "[$(timestamp)] Credential attack detected as NO in text" >> "$RESPONSE_LOG"
+  fi
 else
-  # Look at the file contents to debug
-  echo "[$(timestamp)] Debug - AI Analysis file content:" >> "$RESPONSE_LOG"
-  cat "$AI_ANALYSIS_FILE" >> "$RESPONSE_LOG"
-  is_attack="false"
-fi 
+  echo "[$(timestamp)] Warning: Analysis file not found at $AI_ANALYSIS_FILE" >> "$RESPONSE_LOG"
+fi
+
+echo "[$(timestamp)] Final credential attack determination: $is_attack" >> "$RESPONSE_LOG" 
 severity=$(grep -o '"severity":\s*[0-9]*' "$AI_ANALYSIS_FILE" | grep -o '[0-9]*')
 source_ip=$(grep -o '"source":\s*"[^"]*"' "$AI_ANALYSIS_FILE" 2>/dev/null | grep -o '"[^"]*"' | tr -d '"')
 
