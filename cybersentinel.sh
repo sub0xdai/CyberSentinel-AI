@@ -4,6 +4,9 @@
 
 # Handle broken pipe errors gracefully
 trap '' PIPE
+# Suppress Python pipe errors
+export PYTHONIOENCODING=utf-8
+export PYTHONUNBUFFERED=1
 
 # Banner display
 echo "┌───────────────────────────────────────────────┐"

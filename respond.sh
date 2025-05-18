@@ -57,9 +57,17 @@ EOF
 fi
 
 # Extract key information from AI analysis
-is_attack=$(grep -o '"is_credential_attack":\s*\(true\|false\)' "$AI_ANALYSIS_FILE" 2>/dev/null | grep -o '\(true\|false\)' || 
-  grep -o '"credential_attack":\s*"[^"]*"' "$AI_ANALYSIS_FILE" 2>/dev/null | grep -o 'Yes' || 
-  echo "false") 
+# Try different formats to extract credential attack status
+if grep -q '"is_credential_attack":\s*true' "$AI_ANALYSIS_FILE" 2>/dev/null; then
+  is_attack="true"
+elif grep -q '"credential_attack".*[Yy]es' "$AI_ANALYSIS_FILE" 2>/dev/null; then
+  is_attack="true"
+else
+  # Look at the file contents to debug
+  echo "[$(timestamp)] Debug - AI Analysis file content:" >> "$RESPONSE_LOG"
+  cat "$AI_ANALYSIS_FILE" >> "$RESPONSE_LOG"
+  is_attack="false"
+fi 
 severity=$(grep -o '"severity":\s*[0-9]*' "$AI_ANALYSIS_FILE" | grep -o '[0-9]*')
 source_ip=$(grep -o '"source":\s*"[^"]*"' "$AI_ANALYSIS_FILE" 2>/dev/null | grep -o '"[^"]*"' | tr -d '"')
 
