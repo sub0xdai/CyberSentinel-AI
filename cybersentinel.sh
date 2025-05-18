@@ -234,6 +234,32 @@ else
   echo "[$(timestamp)] Skipping compliance & metrics phase"
 fi
 
+# Execute SIEM integration
+echo
+echo "[$(timestamp)] PHASE 6: SIEM Integration"
+read -p "Send data to Wazuh SIEM? (y/n): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+  # Configure SIEM connection
+  read -p "Wazuh API URL [https://10.0.1.30:55000]: " wazuh_url
+  wazuh_url=${wazuh_url:-"https://10.0.1.30:55000"}
+  export WAZUH_API_URL="$wazuh_url"
+  
+  read -p "Wazuh API User [wazuh]: " wazuh_user
+  wazuh_user=${wazuh_user:-"wazuh"}
+  export WAZUH_API_USER="$wazuh_user"
+  
+  read -p "Wazuh API Password [wazuh]: " wazuh_password
+  wazuh_password=${wazuh_password:-"wazuh"}
+  export WAZUH_API_PASSWORD="$wazuh_password"
+  
+  # Run SIEM integration
+  echo "[$(timestamp)] Running Wazuh SIEM integration"
+  python3 "$SCRIPT_DIR/wazuh_integration.py"
+else
+  echo "[$(timestamp)] Skipping SIEM integration"
+fi
+
 # Display workflow summary
 echo
 echo "┌───────────────────────────────────────────────┐"

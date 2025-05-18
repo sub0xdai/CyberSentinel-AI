@@ -18,8 +18,9 @@ The project uses a hybrid architecture with these core components:
 4. **Response System (`respond.sh`)**: Implements automated responses with actual or simulated IP blocking
 5. **Compliance Mapping (`iso27001_mapper.py`)**: Maps security events to ISO 27001 controls
 6. **Metrics Analysis (`metrics_analyzer.py`)**: Generates security metrics and performance indicators
-7. **Workflow Coordinator (`cybersentinel.sh`)**: Orchestrates all components in a unified workflow
-8. **Dashboard (`generate_dashboard.sh` & `dashboard.html`)**: Visualizes security metrics and alerts
+7. **SIEM Integration (`wazuh_integration.py`)**: Sends enriched security data to Wazuh SIEM
+8. **Workflow Coordinator (`cybersentinel.sh`)**: Orchestrates all components in a unified workflow
+9. **Dashboard (`generate_dashboard.sh` & `dashboard.html`)**: Visualizes security metrics and alerts
 
 ## Commands
 
@@ -37,17 +38,24 @@ python3 cybersentinel.py
 ./respond.sh [real_blocking]
 python3 iso27001_mapper.py
 python3 metrics_analyzer.py
+python3 wazuh_integration.py
 ./generate_dashboard.sh
+python3 serve_dashboard.py
 ```
 
 ### Development Setup
 
 ```bash
 # Install required Python dependencies
-pip install python-dotenv requests matplotlib numpy
+pip install python-dotenv requests matplotlib numpy urllib3
 
 # Set up API key
 echo "OPENAI_API_KEY=your_key_here" > .env
+
+# Set up Wazuh SIEM configuration (optional)
+export WAZUH_API_URL="https://10.0.1.30:55000"
+export WAZUH_API_USER="wazuh"
+export WAZUH_API_PASSWORD="wazuh"
 
 # Make all scripts executable
 chmod +x *.sh *.py
@@ -55,7 +63,7 @@ chmod +x *.sh *.py
 
 ## Component Interactions
 
-The system follows an enhanced multi-vector workflow:
+The system follows an enterprise-grade multi-vector workflow:
 
 1. **Attack Simulation (Optional)**: Generates SSH brute force attack traffic
 2. **Multi-Vector Log Monitoring**: 
@@ -77,6 +85,12 @@ The system follows an enhanced multi-vector workflow:
 6. **Metrics Generation**:
    - Calculates detection accuracy and response times
    - Generates performance metrics and visualizations
-7. **Dashboard Generation**: Creates visual security reports
+7. **SIEM Integration**:
+   - Enriches security events with AI analysis and compliance data
+   - Forwards data to Wazuh SIEM for enterprise security operations
+   - Supports centralized monitoring across multiple systems
+8. **Dashboard Generation**: 
+   - Creates visual security reports
+   - Serves dashboard via built-in web server
 
-Data flows between components via structured JSON files in the `logs/` directory hierarchy, including specialized subdirectories for AI, compliance, metrics, and visualizations.
+Data flows between components via structured JSON files in the `logs/` directory hierarchy, including specialized subdirectories for AI, compliance, metrics, SIEM, and visualizations. The three-VM architecture (attacker, target, SIEM) enables true enterprise security operations center (SOC) capabilities.
