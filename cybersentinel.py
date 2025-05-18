@@ -295,9 +295,27 @@ def log_run_info(analysis):
             attack_status = "Attack detected" if analysis.get("is_credential_attack", False) else "No attack detected"
             severity = analysis.get("severity", 0)
             f.write(f"{attack_status} (Severity: {severity}/10)\n")
+    
+    # Save a human-readable version of the analysis for easier parsing
+    is_attack = analysis.get("is_credential_attack", False)
+    severity = analysis.get("severity", 0)
+    source_ip = analysis.get("source", "")
+    
+    with open(f"{AI_LOG_DIR}/openai_analysis.txt", "w") as f:
+        f.write(f"Credential Attack: {'Yes' if is_attack else 'No'}\n")
+        f.write(f"Severity: {severity}/10\n")
+        f.write(f"Source IP: {source_ip}\n")
+        
+    # Make sure we also save the JSON version
+    with open(f"{AI_LOG_DIR}/openai_analysis.json", "w") as f:
+        json.dump(analysis, f, indent=2)
 
 def main():
     print(f"[{timestamp()}] CyberSentinel-AI starting...")
+    
+    # Create all required directories
+    os.makedirs(LOG_DIR, exist_ok=True)
+    os.makedirs(AI_LOG_DIR, exist_ok=True)
     
     # Get alerts
     alerts = get_alerts()
@@ -331,8 +349,23 @@ def main():
     # Display summary
     summarize_analysis(analysis)
     
-    # Log run information
+    # Log run information and save analysis files
     log_run_info(analysis)
+    
+    # Make sure analysis is saved in both formats
+    is_attack = analysis.get("is_credential_attack", False)
+    severity = analysis.get("severity", 0)
+    source_ip = analysis.get("source", "")
+    
+    # Ensure the JSON file exists
+    with open(f"{AI_LOG_DIR}/openai_analysis.json", "w") as f:
+        json.dump(analysis, f, indent=2)
+    
+    # Create a text version too for easier parsing by shell scripts
+    with open(f"{AI_LOG_DIR}/openai_analysis.txt", "w") as f:
+        f.write(f"Credential Attack: {'Yes' if is_attack else 'No'}\n")
+        f.write(f"Severity: {severity}/10\n")
+        f.write(f"Source IP: {source_ip}\n")
     
     print(f"[{timestamp()}] Analysis completed.")
     print(f"[{timestamp()}] Run 'respond.sh' to execute automated response actions.")

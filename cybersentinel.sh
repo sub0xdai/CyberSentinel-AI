@@ -176,22 +176,46 @@ else
   echo "│ Monitoring: Not executed"
 fi
 
-# Check if AI analysis was performed
+# Check if AI analysis was performed or response was executed
+AI_EXECUTED=false
+ATTACK_CONFIRMED=false
+SEVERITY=""
+
+# First, check the analysis summary text output in stdout capture or analysis log file
 if [ -f "$LOG_DIR/ai/openai_analysis.json" ]; then
-  # Use multi-method detection - similar to respond.sh
+  AI_EXECUTED=true
   if grep -q "is_credential_attack.*true" "$LOG_DIR/ai/openai_analysis.json" || 
      grep -q "Credential Attack: Yes" "$LOG_DIR/ai/openai_analysis.json" ||
      grep -q '"attack":.*true' "$LOG_DIR/ai/openai_analysis.json"; then
+    ATTACK_CONFIRMED=true
     SEVERITY=$(grep -o '"severity":\s*[0-9]*' "$LOG_DIR/ai/openai_analysis.json" | grep -o '[0-9]*')
-    echo "│ AI Analysis: Attack confirmed (Severity: $SEVERITY/10)"
-  else
-    # Check response log as a last resort
-    if [ -f "$LOG_DIR/ai/responses.log" ] && grep -q "Credential attack detected" "$LOG_DIR/ai/responses.log"; then
-      SEVERITY=$(grep -o "severity=[0-9]*" "$LOG_DIR/ai/responses.log" | grep -o '[0-9]*' | head -1)
+  fi
+fi
+
+# Second, check the response log - which is more reliable since it's where actions are taken
+if [ -f "$LOG_DIR/ai/responses.log" ]; then
+  AI_EXECUTED=true
+  if grep -q "Credential Attack: true" "$LOG_DIR/ai/responses.log" || 
+     grep -q "WARNING" "$LOG_DIR/ai/responses.log" || 
+     grep -q "CRITICAL" "$LOG_DIR/ai/responses.log"; then
+    ATTACK_CONFIRMED=true
+    SEVERITY=$(grep -o "severity=[0-9]*" "$LOG_DIR/ai/responses.log" | grep -o '[0-9]*' | head -1)
+    if [ -z "$SEVERITY" ]; then
+      SEVERITY=$(grep -o "Severity: [0-9]*" "$LOG_DIR/ai/responses.log" | grep -o '[0-9]*' | head -1)
+    fi
+  fi
+fi
+
+# Display the appropriate AI analysis status
+if [ "$AI_EXECUTED" = true ]; then
+  if [ "$ATTACK_CONFIRMED" = true ]; then
+    if [ -n "$SEVERITY" ]; then
       echo "│ AI Analysis: Attack confirmed (Severity: $SEVERITY/10)"
     else
-      echo "│ AI Analysis: No attack confirmed"
+      echo "│ AI Analysis: Attack confirmed"
     fi
+  else
+    echo "│ AI Analysis: No attack confirmed"
   fi
 else
   echo "│ AI Analysis: Not executed"
