@@ -3,8 +3,7 @@
 **AI-Powered Security Platform**
 
 ## Overview
-Integrates Kali Linux tools with AI to detect and respond to credential attacks.
-
+Integrates Kali Linux tools with AI to detect and respond to credential attacks. *University project 
 ## Architecture
 - Hybrid bash/Python using Kali tools  
 - GPT-4o for security analysis  
